@@ -1,5 +1,5 @@
 The algorithms implemented here are described in:
 "Convolution based smooth approximations to the absolute value function 
 with application to non-smooth regularization"
-
+and are based on \hat\phi approximation
 

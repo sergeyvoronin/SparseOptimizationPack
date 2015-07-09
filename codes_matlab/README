@@ -1,3 +1,3 @@
 Generate data sets via the scripts in ../system_data_generators.
-Use driver_runner_algs1.m to run multiple algorithms over different data sets
+Use driver_runner_algs1.m to run multiple algorithms over different data sets.
 Then use driver_plotter_algs1.m to plot quantities produced by the driver.

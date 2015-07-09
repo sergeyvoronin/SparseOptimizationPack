@@ -1,0 +1,16 @@
+These codes are written with cuda library and cusp package 
+for matrix-vector operations
+
+to compile, setup cuda library and cusp library. 
+cusp directory should be inside cuda include dir.
+(i.e. /usr/local/cuda-6.0/include/cusp)
+
+source vars (modify per your system):
+$ source setup_vars.sh
+
+compile (add any optimization or system specific compile flags):
+$ ./compile.sh
+
+run:
+$ ./sparse_algs1
+

@@ -1,0 +1,63 @@
+Implementations of Algorithms for sparse optimization / sparse signal recovery
+
+Broadly speaking, the algorithms here do the following:
+Given existence of sparse solution x to Ax = b, recover sparse approximation 
+\tilde{x} close to x given matrix A and vector b (or the noisy variant of b) 
+
+Targeting large sparse matrices on multi-core/parallel architectures
+
+We develop three types of codes
+1. Matlab - simple to read and use, for smaller systems and illustration purposes
+2. GPU - for use with NVIDIA graphics cards, targeting medium size applications 
+3. MPI - targeting large scale applications
+
+==== Generating Data ====
+
+To generate data for different matrix/signal types use the script 
+system_data_generators/driver_generate_system_data.m with Matlab 
+or Octave. This can generate a number of different systems types 
+to test with. Users can also regulate, noise, column norm variations, etc.
+
+to clean up data, image files use:
+rm -rf data/*
+rm -rf images/*
+
+
+==== Using Matlab/Octave codes ====
+
+To test some of the algorithms in Matlab run the script 
+codes_matlab/driver_runner_algs1.m . Notice that this driver 
+can run several trials over a given set of systems with 
+different algorithms (accordingly, the same 
+number of instances must be generated via driver_generate_system_data.m 
+prior to running the script). 
+The script codes_matlab/driver_plotter_algs1.m can then plot median 
+and 1st/3rd quartile quantities collected by the driver. 
+
+
+==== Using GPU codes ====
+
+For this, one must have an NVIDIA cuda capable card, install CUDA and 
+CUSP (http://cusplibrary.github.io/). Then see the codes in 
+codes_nvidia_cuda/ folder. The code sparse_algs_cuda1.c loads a matrix 
+and vectors previously generated with driver_generate_system_data.m and 
+runs a sparse optimization algorithm. Typically the runtime for the same 
+number of iterations is significantly lower than for Matlab.
+More algorithms to be added to GPU.
+
+
+==== Using MPI codes ====
+
+You must install MPICH (or another version of MPI) and PETSc 
+(typically, PETSc pulls and compiles MPICH automatically).
+For installation instructions, see: http://www.mcs.anl.gov/petsc/
+This is under development and you must supply your own matrices in 
+PETSc format. See code petsc_test_l1.c in codes_mpi_petsc/ . Matrices 
+and vectors are submitted using command line arguments pointing to location 
+of binary files following the default binary format:
+http://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/Mat/MatLoad.html   
+ 
+
+Sergey Voronin
+2015
+

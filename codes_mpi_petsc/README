@@ -1,0 +1,4 @@
+MPI codes for large scale sparse optimization
+The provided codes use PETSc as a backbone for sparse matrix operations
+Algorithms implemented in petsc_l1 folder.
+

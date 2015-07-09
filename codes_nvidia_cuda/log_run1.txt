@@ -1,0 +1,2 @@
+done! elapsed time: 6.000000 and ||xn||_2 = 484.985504
+percent error = 17.073202

@@ -61,10 +61,8 @@ for i=1:maxiters
             vn = A*pn;
             wn = A'*vn;
             xn = softThreshold(pn + z - wn, tau);
+            % p=0.9; xn = pThreshold(pn + z - wn, tau, p);
 
-            un = 2*tau*norm(xn,1) + norm(A*xn-b,2)^2;
-
-            %fprintf('--> un1 = %f; un = %f; abs(un - un1) = %f; ||xn - xn1||_2 = %f ; ||xn||_1 = %f\n', un1, un, abs(un - un1), norm(xn - xn1, 2), norm(xn,1));
 
             % compute diff between un and un1 and quit if small
             if(i>3 && (100*(norm(xn - xn1)/norm(xn)))<TOL)

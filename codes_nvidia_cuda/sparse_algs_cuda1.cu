@@ -40,6 +40,37 @@ __global__ void cudasoftThreshold(int N, float tau, const float* x, float * resu
 }
 
 
+/* compute p threshold of vector */
+__global__ void cudapThreshold( int N, float tau, float p, const float* x, float * result) {
+   int i,sgnval;
+   int i0 = blockIdx.x*blockDim.x + threadIdx.x;
+   float val, val2, TOL = 1e-15;
+   
+   // sign(x(i))*max(0,abs(x(i)) - tau*abs(x(i))^(p-1));
+   for(i=i0;i<N;i+=blockDim.x*gridDim.x) {
+      val = x[i];
+      if(abs(val) < TOL){
+         sgnval = 0;
+      } else{
+          if(val>0){ 
+             sgnval = 1; 
+          }
+          else{ 
+             sgnval = -1;
+          }
+      }
+
+      val2 = abs(val) - tau*pow(abs(val), p-1);
+      if(val2 > 0){
+        result[i] = sgnval*val2;
+      }
+      else{
+        result[i] = 0;
+      }
+   }
+}
+
+
 /* multiply a vector yn by a diagonal matrix D with diagonal elements diag_elems */
 __global__ void cudaApplyD( int N, int *diag_elems, float* yn, float * result) {
    int i;

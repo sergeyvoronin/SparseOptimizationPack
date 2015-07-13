@@ -271,7 +271,7 @@ void cg_solve_diag(LinearOperator &A, LinearOperator &At, Vector &b, Vector &z, 
 }
 
 
-int main(void)
+/* int main(void)
 {
     // define some vars
     int i, m,n, num_iters = 10000;
@@ -424,6 +424,186 @@ int main(void)
 
     fprintf(fp_out,"done! elapsed time: %f and ||xn||_2 = %f\n", time_diff, blas::nrm2(xn));
     fprintf(fp_out,"percent error = %f\n", percent_error);
+    fclose(fp_out);
+    return 0;
+} */
+
+
+int main(void)
+{
+    // define some vars
+    int i, vec_length, m, n, num_taus, num_iters;
+    float val, maxz, tau, tau_min, tau_max, log_tau, log_tau_step, time_diff, percent_error, p = 0.7;
+    float *taus, *percent_errors, *solution_norms;
+    FILE *fp, *fp_out;
+    char * line;
+    time_t start_time, end_time;
+
+    char *data_dir = (char *)malloc(1000*sizeof(char));
+    char *A_file = (char *) malloc(1000*sizeof(char));
+    char *b_file = (char *) malloc(1000*sizeof(char));
+    char *x_file = (char *) malloc(1000*sizeof(char));
+
+
+    strcpy(data_dir,"../data/system_data/well_conditioned_staircase/matrix_market/system1/");
+    strcpy(A_file,data_dir);
+    strcat(A_file,"/A.mtx");
+    strcpy(b_file,data_dir);
+    strcat(b_file,"/b.txt");
+    strcpy(x_file,data_dir);
+    strcat(x_file,"/x.txt");
+
+
+    fp_out = fopen("log_run1.txt","w");
+    printf("reading matrix from disk..\n");
+
+    // read matrix from disk
+    printf("reading matrix from disk at %s to host memory..\n", A_file);
+    time(&start_time);
+    cusp::coo_matrix<int, float, cusp::host_memory> Ah;
+    cusp::io::read_matrix_market_file(Ah, A_file);
+    time(&end_time);
+    time_diff = difftime(end_time,start_time);
+    printf("elapsed time: %f\n", time_diff);
+
+
+    // we change to more efficient hyb sparse format on device
+    printf("copying to device memory and changing format..\n");
+    time(&start_time);
+    cusp::hyb_matrix<int,float,cusp::device_memory> A = Ah;
+    time(&end_time);
+    time_diff = difftime(end_time,start_time);
+    printf("elapsed time: %f\n", time_diff);
+
+
+    // make the transpose
+    printf("make transpose on host memory..\n");
+    time(&start_time);
+    cusp::coo_matrix<int, float, cusp::host_memory> Aht;
+    cusp::transpose(Ah, Aht);
+    time(&end_time);
+    time_diff = difftime(end_time,start_time);
+    printf("elapsed time: %f\n", time_diff);
+
+
+    // we change to more efficient hyb sparse format on device
+    printf("copying to device memory and changing format..\n");
+    time(&start_time);
+    cusp::hyb_matrix<int,float,cusp::device_memory> At = Aht;
+    time(&end_time);
+    time_diff = difftime(end_time,start_time);
+    printf("elapsed time: %f\n", time_diff);
+
+    
+    // get matrix dimensions
+    m = A.num_rows;
+    n = A.num_cols;
+    printf("m = %d and n = %d\n", m,n);
+
+    // read vector x from disk to device
+    printf("read x vector from %s\n", x_file);
+    line = (char*)malloc(50*sizeof(char));
+    fp = fopen(x_file,"r");
+    fscanf(fp, "%s\n", line);
+    n = atoi(line);
+    cusp::array1d<float, cusp::device_memory> x(n);
+    for(i=0; i<n; i++){
+        fscanf(fp, "%s\n", line);
+        val = atof(line);
+        x[i] = val;
+        printf("x[%d] = %f\n", i, val);
+    }
+    fclose(fp);
+
+    // read vector b from disk to device
+    printf("read b vector from %s\n", b_file);
+    fp = fopen(b_file,"r");
+    fscanf(fp, "%s\n", line);
+    m = atoi(line);
+    printf("m = %d\n",m);
+    cusp::array1d<float, cusp::device_memory> b(m);
+    for(i=0; i<m; i++){
+        fscanf(fp, "%s\n", line);
+        val = atof(line);
+        b[i] = val;
+        printf("b[%d] = %f\n", i, val);
+    }
+    fclose(fp);
+    printf("freeing line..\n");
+    free(line);
+    
+
+    printf("done reading..\n");
+    printf("blas::nrm2(x) = %f\n", blas::nrm2(x));
+    printf("blas::nrm2(b) = %f\n", blas::nrm2(b));
+
+
+    // start timer
+    time(&start_time);
+    
+    // calculate z = A^t*b (nxm * mx1 = nx1)
+    cusp::array1d<float, cusp::device_memory> z(n);
+    cusp::multiply(At, b, z);
+    maxz = blas::nrmmax(z);
+
+    // set array of taus and run the code...
+    num_taus = 10;
+    num_iters = 5000;
+    taus = (float*)malloc(num_taus*sizeof(float));
+    percent_errors = (float*)malloc(num_taus*sizeof(float));
+    solution_norms = (float*)malloc(num_taus*sizeof(float));
+    tau_max = maxz; 
+    tau_min = maxz/10000;
+    log_tau_step = (log(tau_max)-log(tau_min))/num_taus;
+    for(i=0; i<num_taus; i++){
+        log_tau = log(tau_max) - log_tau_step*i;
+        taus[i] = exp(log_tau); 
+    }
+
+    cusp::array1d<float, cusp::device_memory> x0(n);
+    cusp::array1d<float, cusp::device_memory> xn(n);
+    cusp::array1d<float, cusp::device_memory> dn(n);
+    x0 = z;
+    blas::scal(x0,0.0);
+    for(i=0; i<num_taus; i++){
+        printf("PROCESSING tau_num %d of %d\n", i+1, num_taus);
+        tau = taus[i];
+        printf("tau = %f\n", tau);
+
+        // reuse guess
+        if(i>0){
+            x0 = xn;
+        }
+
+        // run with initial guess
+        printf("running algorithm with tau = %f\n --->", tau);
+        fistaAlgorithm(A, At, x0, b, z, num_iters, tau, xn );
+        printf("algorithm finished. blas::nrm2(xn) = %f\n", blas::nrm2(xn));
+
+        // calculate percent error
+        dn = xn;
+        blas::axpy( x, dn, -1.0f); // dn = xn - x
+        percent_error = 100*(blas::nrm2(dn))/(blas::nrm2(x));
+        percent_errors[i] = percent_error;
+        printf("percent error = %f\n", percent_error);
+
+        solution_norms[i] = blas::nrm2(xn);
+    }
+
+    // end timer
+    time(&end_time); 
+    time_diff = difftime(end_time,start_time);
+
+    printf("elapsed time: %f\n", time_diff);
+
+    printf("percent errors and solution norms at different taus:\n");
+    for(i=0; i<num_taus; i++){
+        printf("tau = %f, \t percent error = %f \t", taus[i], percent_errors[i]);
+        printf("norm(xn) = %f \n", solution_norms[i]);
+        fprintf(fp_out, "tau = %f, \t percent error = %f \t nomr(xn) = %f\n", taus[i], percent_errors[i], solution_norms[i]);
+    }
+
+    fprintf(fp_out,"done! elapsed time: %f\n", time_diff);
     fclose(fp_out);
     return 0;
 }

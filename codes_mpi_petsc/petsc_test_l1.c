@@ -50,12 +50,12 @@ int main(int argc,char **args)
     /* read in A and b from disk */
     PetscPrintf(PETSC_COMM_WORLD,"Loading matrix A from disk...\n");	
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,mat_file,FILE_MODE_READ,&pv);CHKERRQ(ierr);
-    ierr = MatLoad(pv,MATAIJ,&A);CHKERRQ(ierr);
+    ierr = MatLoad(A,pv);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(pv);CHKERRQ(ierr);
 
     PetscPrintf(PETSC_COMM_WORLD,"Loading vector b from disk...\n");	
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,vecb_file,FILE_MODE_READ,&pv);CHKERRQ(ierr);
-    ierr = VecLoad(pv,VECMPI,&b);CHKERRQ(ierr);
+    ierr = VecLoad(b,pv);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(pv);CHKERRQ(ierr);
 
     /* get mat sizes */
@@ -79,8 +79,8 @@ int main(int argc,char **args)
     // now scale so spectral norm < 1
     if(norm_val >= 1){
         PetscPrintf(PETSC_COMM_WORLD, "Scaling system\n");
-        ierr = MatScale(A, 1/(2*norm_val)); CHKERRQ(ierr);
-        ierr = VecScale(b, 1/(2*norm_val)); CHKERRQ(ierr); 
+        ierr = MatScale(A, 1/(1.5*norm_val)); CHKERRQ(ierr);
+        ierr = VecScale(b, 1/(1.5*norm_val)); CHKERRQ(ierr); 
     }
 
     /* create vectors */

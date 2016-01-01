@@ -15,7 +15,7 @@ petsc_test1: petsc_test1.o chkopts
 	${RM} petsc_test1.o 
 
 
-petsc_test_l1: petsc_test_l1.o petsc_l1/l1optmethods.o petsc_l1/wtransforms.o chkopts
-	-${CLINKER}  -o petsc_test_l1 petsc_test_l1.o petsc_l1/l1optmethods.o petsc_l1/wtransforms.o ${PETSC_MAT_LIB} 
-	${RM} petsc_test_l1.o petsc_l1/l1optmethods.o petsc_l1/wtransforms.o
+petsc_test_l1: petsc_test_l1.o petsc_l1/l1optmethods.o chkopts
+	-${CLINKER}  -o petsc_test_l1 petsc_test_l1.o petsc_l1/l1optmethods.o ${PETSC_MAT_LIB} 
+	${RM} petsc_test_l1.o petsc_l1/l1optmethods.o 
 

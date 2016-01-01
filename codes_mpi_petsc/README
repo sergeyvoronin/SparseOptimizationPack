@@ -2,3 +2,16 @@ MPI codes for large scale sparse optimization
 The provided codes use PETSc as a backbone for sparse matrix operations
 Algorithms implemented in petsc_l1 folder.
 
+To use:
+
+Install petsc from http://www.mcs.anl.gov/petsc/
+check to make sure paths in setup_paths.sh match your system
+
+source setup_paths.sh
+make petsc_test1
+make petsc_test_l1
+
+run test programs: load matrix/vector, run optimization alg and record results to disk
+
+./run_test1.sh
+./run_test2.sh

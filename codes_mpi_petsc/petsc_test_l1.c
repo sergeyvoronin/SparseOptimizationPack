@@ -30,6 +30,7 @@ int main(int argc,char **args)
     PetscScalar    *residuals, *Js;
     PetscReal      rval, norm_val, norm_val1, norm_val2, percent_error, min_percent_error;
     PetscMPIInt    rank, size;
+    PetscBool      flg;
     char mat_file[PETSC_MAX_PATH_LEN];
     char vecb_file[PETSC_MAX_PATH_LEN];
     char output_file[PETSC_MAX_PATH_LEN];
@@ -43,20 +44,35 @@ int main(int argc,char **args)
     PetscPrintf(PETSC_COMM_SELF,"Number of processors = %d, rank = %d\n",size,rank);	
 
     /* read command line arguments */
-    ierr = PetscOptionsGetString(PETSC_NULL,"-mat_file",mat_file,PETSC_MAX_PATH_LEN-1,PETSC_NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsGetString(PETSC_NULL,"-vecb_file",vecb_file,PETSC_MAX_PATH_LEN-1,PETSC_NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsGetString(PETSC_NULL,"-output_file",output_file,PETSC_MAX_PATH_LEN-1,PETSC_NULL);CHKERRQ(ierr);
-
+    ierr = PetscOptionsGetString(PETSC_NULL,"-mat_file",mat_file,PETSC_MAX_PATH_LEN-1,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"error setting mat file location");
+    ierr = PetscOptionsGetString(PETSC_NULL,"-vecb_file",vecb_file,PETSC_MAX_PATH_LEN-1,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"error setting vec file location");
+    ierr = PetscOptionsGetString(PETSC_NULL,"-output_file",output_file,PETSC_MAX_PATH_LEN-1,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"error setting output file location");
+    
     /* read in A and b from disk */
-    PetscPrintf(PETSC_COMM_WORLD,"Loading matrix A from disk...\n");	
+    PetscPrintf(PETSC_COMM_WORLD,"Loading matrix A from disk: %s\n", mat_file);
+    ierr = PetscViewerCreate(PETSC_COMM_WORLD,&pv); CHKERRQ(ierr);
+    ierr = PetscViewerSetType(pv, PETSCVIEWERBINARY); CHKERRQ(ierr);
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,mat_file,FILE_MODE_READ,&pv);CHKERRQ(ierr);
+    ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
+    ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+    ierr = MatSetType(A,MATSEQAIJ); CHKERRQ(ierr);
     ierr = MatLoad(A,pv);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(pv);CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&pv);CHKERRQ(ierr);
+    PetscPrintf(PETSC_COMM_WORLD,"done reading.\n");
 
-    PetscPrintf(PETSC_COMM_WORLD,"Loading vector b from disk...\n");	
+    PetscPrintf(PETSC_COMM_WORLD,"Loading vector b from disk: %s\n", vecb_file);	
+    ierr = PetscViewerCreate(PETSC_COMM_WORLD,&pv);
+    ierr = PetscViewerSetType(pv, PETSCVIEWERBINARY); CHKERRQ(ierr);
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,vecb_file,FILE_MODE_READ,&pv);CHKERRQ(ierr);
+    ierr = VecCreate(PETSC_COMM_WORLD,&b); CHKERRQ(ierr);
+    ierr = VecSetFromOptions(b); CHKERRQ(ierr);
     ierr = VecLoad(b,pv);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(pv);CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&pv);CHKERRQ(ierr);
+    PetscPrintf(PETSC_COMM_WORLD,"done reading.\n");
+
 
     /* get mat sizes */
     ierr = MatGetSize(A,&m,&n);CHKERRQ(ierr);
@@ -83,6 +99,7 @@ int main(int argc,char **args)
         ierr = VecScale(b, 1/(1.5*norm_val)); CHKERRQ(ierr); 
     }
 
+   
     /* create vectors */
     VecCreate(PETSC_COMM_WORLD,&x);
     VecSetSizes(x,PETSC_DECIDE,n);
@@ -111,23 +128,10 @@ int main(int argc,char **args)
     PetscPrintf(PETSC_COMM_WORLD, "max( (A^{t} * b) = %f\n", tau_max);
     PetscPrintf(PETSC_COMM_WORLD, "norm( (A^{t} * b) , 2 ) = %f\n", rval);
 
-    if(use_wavelets == 0){
-        VecCopy(v,z);
-        VecMax(z,&i,&tau_max);
-        VecNorm(z,NORM_2,&rval);
-    }
-    else if(use_wavelets == 1){
-        ierr = vecWT(v,&z,"inversetranspose"); CHKERRQ(ierr);
-        VecMax(z,&i,&tau_max);
-        VecNorm(z,NORM_2,&rval);
-        PetscPrintf(PETSC_COMM_WORLD, "max( W*(A^{t} * b) = %f\n", tau_max);
-        PetscPrintf(PETSC_COMM_WORLD, "norm( W*(A^{t} * b) , 2 ) = %f\n", rval);
-    }
-    else{
-        PetscPrintf(PETSC_COMM_WORLD,"invalid wavelet option, exiting.\n");
-        return -1;
-    }
-    
+    VecCopy(v,z);
+    VecMax(z,&i,&tau_max);
+    VecNorm(z,NORM_2,&rval);
+
     PetscPrintf(PETSC_COMM_WORLD, "\n test projection onto l1 ball..\n");
     ierr = projectOnL1Ball(b, &v, 50); CHKERRQ(ierr);
     VecNorm(b,NORM_2,&rval);
@@ -145,14 +149,9 @@ int main(int argc,char **args)
     Js = (PetscScalar*)malloc((maxiters+1)*sizeof(PetscScalar));
 
     PetscPrintf(PETSC_COMM_WORLD,"running l1 iteration with tau = %f (tau_max = %f)..\n", tau, tau_max);
-    if(use_wavelets == 0){
         //ierr = hardThresholdedLandweber(A, b, tau, x0, TOL, maxiters, &x, &numiters,residuals,Js); CHKERRQ(ierr);
         //ierr = thresholdedLandweber(A, b, tau, x0, TOL, maxiters, &x, &numiters,residuals,Js); CHKERRQ(ierr);
         ierr = thresholdedFista(A, b, tau, x0, TOL, maxiters, &x, &numiters,residuals,Js); CHKERRQ(ierr);
-    }
-    else if(use_wavelets == 1){
-        ierr = thresholdedFistaWT(A, b, tau, x0, TOL, maxiters, &x, &numiters,residuals,Js); CHKERRQ(ierr);
-    }
     PetscPrintf(PETSC_COMM_WORLD,"finished with numiters = %d\n", numiters);
    
     /* calculate norms and residual */ 
@@ -188,20 +187,20 @@ int main(int argc,char **args)
 
     /* write solution x to disk */
     PetscPrintf(PETSC_COMM_WORLD,"Writing solution x to %s.\n", output_file);	
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,output_file,FILE_MODE_WRITE,&pv);CHKERRQ(ierr);
+    /*ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,output_file,FILE_MODE_WRITE,&pv);CHKERRQ(ierr);
     ierr = VecView(x,pv); CHKERRQ(ierr);
     ierr = PetscViewerDestroy(pv);CHKERRQ(ierr);
     PetscPrintf(PETSC_COMM_WORLD,"done writing.\n");	
-
+    */
    
     /* destroy the mat and vecs */
     PetscPrintf(PETSC_COMM_WORLD,"Freeing up memory by destroying the matrix and vectors.\n");
-    ierr = MatDestroy(A); CHKERRQ(ierr);
-    ierr = VecDestroy(b); CHKERRQ(ierr);
-    ierr = VecDestroy(x); CHKERRQ(ierr);
-    ierr = VecDestroy(dn); CHKERRQ(ierr);
-    ierr = VecDestroy(v); CHKERRQ(ierr);
-    ierr = VecDestroy(z); CHKERRQ(ierr);
+    ierr = MatDestroy(&A); CHKERRQ(ierr);
+    ierr = VecDestroy(&b); CHKERRQ(ierr);
+    ierr = VecDestroy(&x); CHKERRQ(ierr);
+    ierr = VecDestroy(&dn); CHKERRQ(ierr);
+    ierr = VecDestroy(&v); CHKERRQ(ierr);
+    ierr = VecDestroy(&z); CHKERRQ(ierr);
     PetscPrintf(PETSC_COMM_WORLD,"Done freeing memory, exiting.\n");
 
     /* finalize and exit */

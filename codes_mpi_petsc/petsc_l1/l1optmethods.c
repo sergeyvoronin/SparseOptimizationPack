@@ -81,7 +81,7 @@ PetscErrorCode monitorSolution(Vec xn, PetscInt iter_num, PetscScalar tau, char 
         PetscPrintf(PETSC_COMM_WORLD,"write monitor file to disk: %s ; iter_num = %d; last_iter_count = %d\n", output_path, iter_num, last_iter_count);
         ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,output_path,FILE_MODE_WRITE,&pv);CHKERRQ(ierr);
         ierr = VecView(xn,pv); CHKERRQ(ierr);
-        ierr = PetscViewerDestroy(pv);CHKERRQ(ierr);
+        ierr = PetscViewerDestroy(&pv);CHKERRQ(ierr);
         PetscPrintf(PETSC_COMM_WORLD,"done write monitor file to disk\n");
 
         monitor_save_number++;
@@ -270,12 +270,12 @@ PetscErrorCode thresholdedLandweber(Mat A, Vec b, Vec true_solution, PetscScalar
     
 
     /* free memory */
-    ierr = VecDestroy(z); CHKERRQ(ierr);
-    ierr = VecDestroy(xn); CHKERRQ(ierr);
-    ierr = VecDestroy(vn); CHKERRQ(ierr);
-    ierr = VecDestroy(wn); CHKERRQ(ierr);
-    ierr = VecDestroy(tn); CHKERRQ(ierr);
-    ierr = VecDestroy(dn); CHKERRQ(ierr);
+    ierr = VecDestroy(&z); CHKERRQ(ierr);
+    ierr = VecDestroy(&xn); CHKERRQ(ierr);
+    ierr = VecDestroy(&vn); CHKERRQ(ierr);
+    ierr = VecDestroy(&wn); CHKERRQ(ierr);
+    ierr = VecDestroy(&tn); CHKERRQ(ierr);
+    ierr = VecDestroy(&dn); CHKERRQ(ierr);
 
     return ierr;
 }
@@ -440,13 +440,13 @@ PetscErrorCode thresholdedFista(Mat A, Vec b, PetscScalar tau, Vec x0, PetscScal
     VecCopy(xn, *output); 
 
     /* free memory */
-    ierr = VecDestroy(z); CHKERRQ(ierr);
-    ierr = VecDestroy(xn); CHKERRQ(ierr);
-    ierr = VecDestroy(xn_prev); CHKERRQ(ierr);
-    ierr = VecDestroy(dn); CHKERRQ(ierr);
-    ierr = VecDestroy(vn); CHKERRQ(ierr);
-    ierr = VecDestroy(wn); CHKERRQ(ierr);
-    ierr = VecDestroy(tmp_vec); CHKERRQ(ierr);
+    ierr = VecDestroy(&z); CHKERRQ(ierr);
+    ierr = VecDestroy(&xn); CHKERRQ(ierr);
+    ierr = VecDestroy(&xn_prev); CHKERRQ(ierr);
+    ierr = VecDestroy(&dn); CHKERRQ(ierr);
+    ierr = VecDestroy(&vn); CHKERRQ(ierr);
+    ierr = VecDestroy(&wn); CHKERRQ(ierr);
+    ierr = VecDestroy(&tmp_vec); CHKERRQ(ierr);
     ierr = PetscFree(tns); CHKERRQ(ierr);
 
     return ierr;
@@ -571,7 +571,7 @@ PetscErrorCode softThreshold(Vec input, Vec *output, PetscScalar tau) {
     ierr = VecCopy(output_local,*output); CHKERRQ(ierr);
 
     // free memory
-    ierr = VecDestroy(output_local); CHKERRQ(ierr);
+    ierr = VecDestroy(&output_local); CHKERRQ(ierr);
     ierr = PetscFree(ix); CHKERRQ(ierr);
     ierr = PetscFree(y); CHKERRQ(ierr);
 
@@ -629,7 +629,7 @@ PetscErrorCode hardThreshold(Vec input, Vec *output, PetscScalar tau) {
     ierr = VecCopy(output_local,*output); CHKERRQ(ierr);
 
     // free memory
-    ierr = VecDestroy(output_local); CHKERRQ(ierr);
+    ierr = VecDestroy(&output_local); CHKERRQ(ierr);
     ierr = PetscFree(ix); CHKERRQ(ierr);
     ierr = PetscFree(y); CHKERRQ(ierr);
 
@@ -700,7 +700,7 @@ PetscErrorCode softThreshold2(Vec input, Vec *output, PetscScalar theta, PetscSc
     ierr = VecCopy(output_local,*output); CHKERRQ(ierr);
 
     // free memory
-    ierr = VecDestroy(output_local); CHKERRQ(ierr);
+    ierr = VecDestroy(&output_local); CHKERRQ(ierr);
     ierr = PetscFree(ix); CHKERRQ(ierr);
     ierr = PetscFree(y); CHKERRQ(ierr);
 
@@ -724,7 +724,6 @@ PetscErrorCode projectOnL1Ball(Vec input, Vec *output, PetscScalar R){
     PetscScalar *input_vec_vals, *input_vec_vals_sorted, *output_vec_vals;
     PetscScalar *local_vals,*my_local_vals;
     MPI_Status status;
-    Node *input_node, *output_node;
 
     MPI_Comm_size(PETSC_COMM_WORLD,&size);
     MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
@@ -923,7 +922,7 @@ PetscErrorCode projectOnL1Ball(Vec input, Vec *output, PetscScalar R){
     ierr = VecCopy(svec,*output); CHKERRQ(ierr);
 
     // free stuff
-    ierr = VecDestroy(svec); CHKERRQ(ierr);
+    ierr = VecDestroy(&svec); CHKERRQ(ierr);
     free(input_vec_vals_sorted);
     free(my_local_vals);
     free(ix);
@@ -1133,10 +1132,10 @@ PetscErrorCode thresholded_coordinate_descent(Mat A, Vec b, Vec true_solution, P
     VecCopy(xn, *output); 
 
     /* free memory */
-    ierr = VecDestroy(y); CHKERRQ(ierr);
-    ierr = VecDestroy(aj); CHKERRQ(ierr);
-    ierr = VecDestroy(vn); CHKERRQ(ierr);
-    ierr = VecDestroy(dn); CHKERRQ(ierr);
+    ierr = VecDestroy(&y); CHKERRQ(ierr);
+    ierr = VecDestroy(&aj); CHKERRQ(ierr);
+    ierr = VecDestroy(&vn); CHKERRQ(ierr);
+    ierr = VecDestroy(&dn); CHKERRQ(ierr);
     ierr = PetscFree(ix); CHKERRQ(ierr);
     ierr = PetscFree(ys); CHKERRQ(ierr);
     ierr = PetscFree(column_norms); CHKERRQ(ierr);
@@ -1226,9 +1225,9 @@ PetscErrorCode getLargestSingularValue(Mat A, PetscInt niters, PetscScalar *sval
     }
 
     // free data
-    ierr = VecDestroy(v); CHKERRQ(ierr);
-    ierr = VecDestroy(w); CHKERRQ(ierr);
-    ierr = VecDestroy(b); CHKERRQ(ierr);
+    ierr = VecDestroy(&v); CHKERRQ(ierr);
+    ierr = VecDestroy(&w); CHKERRQ(ierr);
+    ierr = VecDestroy(&b); CHKERRQ(ierr);
 
     return ierr;
 }

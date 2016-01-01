@@ -1,0 +1,2 @@
+run with vecb_file = data/vec1.petsc
+numiters = 10
